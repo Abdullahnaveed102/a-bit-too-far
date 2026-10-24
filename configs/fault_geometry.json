@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "purpose": "Reference designs for protocol controls, equal-budget geometry, and fault composition.",
+  "common_protocol": "controlled_protocol.json",
+  "seed": 20261017,
+  "questions_per_task": 200,
+  "draws_per_question": 2,
+  "fault_operations": ["flip", "stuck_at_0", "stuck_at_1"],
+  "injection": {
+    "target": "decoder_linear_projection_outputs",
+    "projection_names": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    "exclude_language_model_output_head": true,
+    "method": "PyTorch forward hook",
+    "lifetime": "single transient mutation",
+    "bit_field": "all_16_bits",
+    "sites_within_tensor": "sample without replacement",
+    "bits_within_value": "sample without replacement",
+    "selected_bits_are_not_changed_bits": true
+  },
+  "protocol_controls": {
+    "stopping_regimes": ["natural", "fixed"],
+    "arms_per_regime": [
+      {"arm": "no_hook", "selected_bits": 0},
+      {"arm": "empty_hook", "selected_bits": 0},
+      {"arm": "identity_write", "sites": 1, "bits_per_site": 1},
+      {"arm": "flip", "selected_bits": 1, "sites": 1, "bits_per_site": 1},
+      {"arm": "flip", "selected_bits": 16, "sites": 4, "bits_per_site": 4}
+    ],
+    "fault_stage": "prefill",
+    "conditions_per_configuration": 10,
+    "assigned_executions": 24000
+  },
+  "equal_budget_geometry": {
+    "generation_regime": "natural",
+    "stage": "prefill",
+    "placement": "within_tensor",
+    "module_sampling": "uniform over eligible projections",
+    "selected_bit_budgets": [16, 32, 64],
+    "bits_per_site": [1, 2, 4, 8, 16],
+    "site_count": "selected_bit_budget / bits_per_site",
+    "matching": "same question, draw, and target module; site coordinates are sampled for each geometry",
+    "conditions_per_configuration": 45,
+    "assigned_executions": 108000
+  },
+  "composition": {
+    "generation_regime": "fixed",
+    "fixed_new_tokens": 256,
+    "placements": {
+      "within_tensor": {"stage": "prefill"},
+      "cross_layer": {"stage": "prefill"},
+      "cross_step": {"stage": "decode", "first_decode_step_one_based": 4}
+    },
+    "arms": {
+      "no_fault": {"selected_bits": 0, "sites": 0},
+      "A": {"selected_bits": 8, "sites": 2},
+      "B": {"selected_bits": 8, "sites": 2},
+      "AB": {"selected_bits": 16, "sites": 4}
+    },
+    "bits_per_site": 4,
+    "matching": "A and B are disjoint components of the exact AB plan; all four arms share the question and draw",
+    "conditions_per_configuration": 36,
+    "assigned_four_arm_blocks": 21600,
+    "assigned_executions": 86400
+  }
+}

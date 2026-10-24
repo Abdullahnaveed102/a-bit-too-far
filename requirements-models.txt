@@ -1,0 +1,7 @@
+# Optional dependencies for tensor hooks and native chat-template rendering.
+# These versions match the controlled experiments. Select the appropriate
+# PyTorch CUDA build separately when using a GPU.
+torch==2.9.0
+transformers==4.57.1
+tokenizers==0.22.1
+huggingface-hub==0.36.2

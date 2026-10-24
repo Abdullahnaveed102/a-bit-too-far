@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "purpose": "Reference settings for calibration, protection intensity, and healthy runtime.",
+  "common_protocol": "controlled_protocol.json",
+  "policies": {
+    "none": "no repair",
+    "nonfinite": "NaN to zero; positive/negative infinity to upper/lower bound; finite values unchanged",
+    "finite": "clamp finite values to bounds; nonfinite values unchanged",
+    "combined": "apply both finite clipping and nonfinite repair"
+  },
+  "application": {
+    "coverage": "all eligible decoder linear projections",
+    "invocations": "every covered prefill and decode invocation",
+    "order": "inject first, then repair in the same forward hook before returning the output",
+    "matching": "replay the selected fault plan across policies; protection can change the values presented to a later mutation"
+  },
+  "calibration": {
+    "inputs_per_model_task": 128,
+    "phase": "clean_prefill",
+    "methods": ["minmax", "sampled_quantile"],
+    "collect_both_methods_in_same_forwards": true,
+    "minmax": "observe all activation values per module",
+    "sampled_quantile": {
+      "quantiles": [0.001, 0.999],
+      "values_per_module_input": 128,
+      "value_selection": "evenly spaced flattened indices via torch.linspace(...).long()",
+      "reservoir_capacity": 8192,
+      "reservoir": "seeded per model, dtype, task, and module",
+      "quantile_index": "int(q * (n - 1)) in sorted reservoir; no interpolation"
+    },
+    "expansion_scale": 1.25,
+    "expanded_bounds": "midpoint +/- scale * half_range, capped at FP16 finite limits",
+    "profiles_included": false
+  },
+  "initial_calibration_assessment": {
+    "seed": 20261017,
+    "questions_per_task": 200,
+    "draws_per_question": 2,
+    "policies": ["none", "nonfinite", "finite", "combined"],
+    "finite_bound_method": "sampled_quantile",
+    "fault_operations": ["flip", "stuck_at_0", "stuck_at_1"],
+    "fault_geometries": [
+      {"selected_bits": 4, "sites": 4, "bits_per_site": 1},
+      {"selected_bits": 16, "sites": 4, "bits_per_site": 4}
+    ],
+    "healthy_arms": ["no_hook", "monitor_none", "nonfinite", "finite", "combined"],
+    "conditions_per_configuration": 29,
+    "assigned_executions": 69600,
+    "note": "Separate cohort and initial policy assessment, not pooled with the later min/max protection grid."
+  },
+  "matched_calibration_comparison": {
+    "seed": 20261021,
+    "healthy_questions_per_task": 200,
+    "healthy_draws_per_question": 1,
+    "healthy_arms": [
+      "no_hook", "monitor_none", "quantile_nonfinite", "quantile_finite",
+      "quantile_combined", "minmax_nonfinite", "minmax_finite", "minmax_combined"
+    ],
+    "healthy_assigned_executions": 9600,
+    "selection_criterion": "zero observed loss of initially scorer-correct answers on the healthy selection cohort",
+    "fault_questions_per_task": 200,
+    "fault_draws_per_question": 2,
+    "fault_operations": ["flip", "stuck_at_1"],
+    "selected_bits": 16,
+    "bits_per_site": 4,
+    "sites": 4,
+    "fault_stage": "prefill",
+    "fault_bound_method": "minmax",
+    "fault_policies": ["none", "nonfinite", "finite", "combined"],
+    "fault_assigned_executions": 19200,
+    "assigned_executions": 28800,
+    "cohorts": "healthy selection, fault evaluation, and calibration use separate inputs"
+  },
+  "protection_intensity": {
+    "seed": 20261022,
+    "source_fault_plan_seed": 20261021,
+    "questions_per_task": 200,
+    "draws_per_question": 1,
+    "fault_operations": ["flip", "stuck_at_1"],
+    "selected_bit_budgets": [4, 16, 64],
+    "bits_per_site": [1, 4],
+    "site_count": "selected_bit_budget / bits_per_site",
+    "fault_stage": "prefill",
+    "placement": "within_tensor",
+    "bound_method": "minmax",
+    "policies": ["none", "nonfinite", "finite", "combined"],
+    "fault_plans": 14400,
+    "assigned_policy_executions": 57600,
+    "new_executions": 48000,
+    "reused_executions": 9600,
+    "reuse": "draw zero of the matched-calibration 16-bit/four-bits-per-site condition, not additional replications"
+  },
+  "healthy_runtime": {
+    "seed": 20261022,
+    "questions_per_task": 30,
+    "source_cohort": "subset of the matched-calibration healthy policy-selection cohort",
+    "independent_healthy_holdout": false,
+    "arms": ["no_hook", "monitor_none", "nonfinite", "finite", "combined"],
+    "repetitions": 3,
+    "assigned_timed_requests": 2700,
+    "warmups": "one generation per arm per worker, outside the timers",
+    "arm_order": "deterministically interleaved within question and repetition",
+    "timers": ["synchronized_generation", "synchronized_outer_service"],
+    "excluded_from_timing": ["model_loading", "warmup", "clean_references", "calibration", "file_io"],
+    "keep_output_length_effects": true,
+    "diagnostic_intervention_counting": false,
+    "repair_arithmetic_enabled": true,
+    "scope": "single-worker eager-hook generation, not an optimized serving-throughput benchmark"
+  }
+}

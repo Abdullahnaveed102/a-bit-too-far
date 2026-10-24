@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "purpose": "Reference settings for the controlled experiments; not a campaign launcher configuration.",
+  "models": {
+    "llama2_7b": {
+      "id": "meta-llama/Llama-2-7b-hf",
+      "revision": "01c7f73d771dfac7d292323805ebc428287df4f9",
+      "prompt_format": "plain",
+      "prompt_protocol": "llama2_base_fewshot_final_answer_v2",
+      "add_special_tokens": true,
+      "trust_remote_code": false
+    },
+    "mistral7b": {
+      "id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "revision": "c170c708c41dac9275d15a8fff4eca08d52bab71",
+      "prompt_format": "chat",
+      "prompt_protocol": "native_chat_concise_final_answer_v3",
+      "chat_template_sha256": "e16746b40344d6c5b5265988e0328a0bf7277be86f1c335156eae07e29c82826",
+      "chat_system_prompt": null,
+      "add_special_tokens": false,
+      "trust_remote_code": false
+    },
+    "granite33_8b": {
+      "id": "ibm-granite/granite-3.3-8b-instruct",
+      "revision": "51dd4bc2ade4059a6bd87649d68aa11e4fb2529b",
+      "prompt_format": "chat",
+      "prompt_protocol": "native_chat_concise_final_answer_v3",
+      "chat_template_sha256": "0bea7711316005a1c37c9941a7ee2a26311d223c979abee416aab0a402fc5b56",
+      "chat_system_prompt": "Knowledge Cutoff Date: April 2024.\nYou are Granite, developed by IBM. You are a helpful AI assistant.",
+      "add_special_tokens": false,
+      "trust_remote_code": false
+    }
+  },
+  "tasks": {
+    "gsm8k": {
+      "source": "https://github.com/openai/grade-school-math",
+      "calibration_split": "train",
+      "evaluation_split": "test"
+    },
+    "squad2": {
+      "source": "https://rajpurkar.github.io/SQuAD-explorer/",
+      "calibration_split": "train-v2.0",
+      "evaluation_split": "dev-v2.0"
+    }
+  },
+  "input_selection": {
+    "questions_per_task_per_cohort": 200,
+    "same_task_questions_shared_across_models": true,
+    "deduplicate_question_context_units": true,
+    "exclude_conflicting_labels": true,
+    "merge_compatible_answer_references": true,
+    "separate_calibration_and_evaluation": true,
+    "cohort_lists_included": false
+  },
+  "generation": {
+    "dtype": "float16",
+    "attention_implementation": "eager",
+    "model_mode": "eval",
+    "batch_size": 1,
+    "token_selection": "logits_argmax",
+    "use_cache": true,
+    "new_cache_per_request": true,
+    "max_new_tokens": 256,
+    "default_stopping": "first_eos_or_token_limit",
+    "composition_stopping": "fixed_256_new_tokens",
+    "scoring_text": "decoded_prefix_through_first_eos_boundary",
+    "chat_rendering": "apply_chat_template(tokenize=False, add_generation_prompt=True)"
+  },
+  "scoring": {
+    "version": "final_answer_v1.4",
+    "answer_markers": ["Final answer:", "####"],
+    "marker_case_sensitive": false,
+    "marked_answer": "text after the first marker on the same physical line",
+    "missing_marker": "use full stripped response",
+    "empty_marked_line": "unresolved",
+    "gsm8k": "one unambiguous normalized number, including equivalent fractions and decimals",
+    "qa": "normalized exact match against gold answers; explicit no-answer phrases map to empty answers",
+    "qa_max_words": 32,
+    "qa_max_characters": 240,
+    "correctness_denominator": "all assigned executions",
+    "retention_denominator": "executions with scorer-correct clean references",
+    "unresolved_counts_as_correct": false,
+    "qa_token_f1": "separate lexical sensitivity endpoint"
+  },
+  "recorded_environment": {
+    "platform": "Linux x86_64",
+    "gpu": "NVIDIA B200",
+    "python": "3.10.19",
+    "torch": "2.9.0+cu128",
+    "torch_cuda_build": "12.8",
+    "cuda_runtime_version": null,
+    "transformers": "4.57.1",
+    "accelerate": "1.11.0",
+    "tokenizers": "0.22.1",
+    "safetensors": "0.6.2",
+    "huggingface_hub": "0.36.2",
+    "numpy": "2.2.6",
+    "pandas": "2.3.3",
+    "deterministic_algorithms": false,
+    "cudnn_benchmark": false,
+    "matmul_allow_tf32": false
+  }
+}
